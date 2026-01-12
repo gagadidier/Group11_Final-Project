@@ -9,169 +9,101 @@ This project develops a secure, internal Small Area Estimation (SAE) framework f
 •	Aggregated results (sector-level only, no individual records)
 •	Documentation and configuration files
 
-# Directory Structure
-text
-rwanda-sae-nisr/                      # MAIN PROJECT DIRECTORY
-│
-├── 🔒 SECURE_ZONE/                    # ⚠️ NISR INTERNAL ONLY ⚠️
-│   │   (Contains actual confidential data - NOT in this repository)
-│   ├── /nisr_server/dhs_data/        # Actual DHS .DTA files
-│   │   ├── RWKR81FL.DTA              # Children's Recode (stunting)
-│   │   ├── RWIR81FL.DTA              # Individual Recode
-│   │   └── RWHR81FL.DTA              # Household Recode
-│   │
-│   ├── /nisr_server/census_data/     # Rwanda Census 2012
-│   │   └── PHC5_2012/                # Census with coordinates
-│   │
-│   └── /nisr_server/results/         # Final outputs for internal use
-│
-├── code/                             # ✅ PUBLIC: All code (no sensitive data)
-│   │
-│   ├── 1_data_processing/           # Data preparation modules
-│   │   ├── dhs_processor.py         # Loads & processes DHS data
-│   │   │   └── Key Function: process_dhs_children_stunting()
-│   │   │       • Reads DHS .DTA files using pyreadstat
-│   │   │       • Calculates HAZ scores and stunting classifications
-│   │   │       • Outputs: child-level stunting indicators
-│   │   │
-│   │   ├── census_harmonizer.py     # Harmonizes DHS-Census variables
-│   │   │   └── Key Function: harmonize_datasets()
-│   │   │       • Matches sector IDs between datasets
-│   │   │       • Creates common variable definitions
-│   │   │       • Outputs: harmonized sector-level file
-│   │   │
-│   │   ├── elevation_extractor.py   # Geographic elevation processing
-│   │   │   └── Key Function: extract_elevation_data()
-│   │   │       • Uses sector coordinates from Census
-│   │   │       • Extracts elevation from SRTM/Google API
-│   │   │       • Outputs: sector_elevation.csv
-│   │   │
-│   │   └── sector_aggregator.py     # Creates analysis datasets
-│   │       └── Key Function: create_sector_level_analysis()
-│   │           • Aggregates child-level to sector-level
-│   │           • Adds socioeconomic covariates
-│   │           • Outputs: sae_analysis_dataset.csv
-│   │
-│   ├── 2_sae_models/                # Statistical modeling
-│   │   ├── sae_fay_herriot.py       # Fay-Herriot SAE implementation
-│   │   │   └── Key Function: fit_fay_herriot_model()
-│   │   │       • Implements area-level SAE model
-│   │   │       • Incorporates elevation as covariate
-│   │   │       • Produces sector-level predictions with SE
-│   │   │
-│   │   ├── model_validation.py      # Cross-validation & diagnostics
-│   │   │   └── Key Function: cross_validate_sae()
-│   │   │       • Leave-one-out cross-validation
-│   │   │       • Calculates RMSE, bias metrics
-│   │   │       • Outputs: validation_report.pdf
-│   │   │
-│   │   └── uncertainty_estimation.py # Error propagation
-│   │
-│   ├── 3_visualization/             # Mapping and charts
-│   │   ├── sector_maps.py           # Spatial visualization
-│   │   │   └── Key Function: create_stunting_elevation_map()
-│   │   │       • Choropleth maps of Rwanda sectors
-│   │   │       • Overlays stunting rates and elevation
-│   │   │       • Outputs: interactive HTML maps
-│   │   │
-│   │   ├── results_dashboard.py     # Interactive dashboard
-│   │   │   └── Key Function: launch_dashboard()
-│   │   │       • Streamlit app for exploring results
-│   │   │       • Sector comparison tools
-│   │   │       • Model diagnostics display
-│   │   │
-│   │   └── report_generator.py      # Automated reporting
-│   │
-│   ├── 4_utilities/                 # Helper functions
-│   │   ├── config_manager.py        # Manages paths and parameters
-│   │   ├── data_validation.py       # Quality checks
-│   │   └── logging_setup.py         # Audit logging
-│   │
-│   └── run_pipeline.py              # ⭐ MAIN EXECUTION SCRIPT ⭐
-│       • Orchestrates entire workflow
-│       • Calls modules in correct sequence
-│       • Handles errors and logging
-│
-├── config/                          # Configuration files
-│   ├── paths.json                   # File path definitions
-│   │   └── Example structure:
-│   │       {
-│   │         "raw_dhs": "/nisr_server/dhs_data/RWKR81FL.DTA",
-│   │         "output_dir": "/nisr_server/results/2024_sae",
-│   │         "shapefiles": "./data/external/rwanda_sectors.shp"
-│   │       }
-│   │
-│   ├── model_parameters.yaml        # SAE model settings
-│   │   └── Example:
-│   │       fay_herriot:
-│   │         covariates: ["elevation", "wealth_index", "urban"]
-│   │         variance_method: "reml"
-│   │         confidence_level: 0.95
-│   │
-│   └── variables_mapping.csv        # DHS-Census variable matching
-│
-├── data/                            # ✅ PUBLIC: Synthetic/test data only
-│   ├── synthetic/                   # Simulated data for development
-│   │   ├── sample_dhs_children.csv  # Fake child records
-│   │   ├── sample_sector_data.csv   # Fake sector aggregates
-│   │   └── README_SYNTHETIC.md      # ⚠️ CLEARLY MARKS AS FAKE
-│   │
-│   ├── external/                    # Publicly available data
-│   │   ├── rwanda_admin_boundaries/ # Shapefiles from GADM
-│   │   ├── srtm_elevation/          # Public elevation tiles
-│   │   └── metadata/                # Public data documentation
-│   │
-│   └── processed/                   # Will contain processed outputs
-│       └── (Initially empty - filled during processing)
-│
-├── outputs/                         # Generated results
-│   ├── models/                      # Saved model objects
-│   ├── predictions/                 # Sector-level estimates
-│   │   └── Format: sector_id, stunting_rate, se, lower_ci, upper_ci
-│   │
-│   ├── reports/                     # Analysis reports
-│   │   ├── technical_report.pdf     # Full methodology
-│   │   ├── policy_brief.pdf         # Non-technical summary
-│   │   └── validation_results/      # Cross-validation outputs
-│   │
-│   └── visualizations/              # Maps and charts
-│       ├── maps/                    # Interactive HTML maps
-│       ├── charts/                  .png charts for reports
-│       └── dashboard/               # Dashboard assets
-│
-├── docs/                            # Documentation
-│   ├── methodology/                 # Technical documentation
-│   │   ├── sae_methodology.md       # SAE theory & implementation
-│   │   ├── data_harmonization.md    # DHS-Census matching
-│   │   └── elevation_processing.md  # GIS methods
-│   │
-│   ├── user_guides/                 # How-to guides
-│   │   ├── setup_guide.md           # Environment setup
-│   │   ├── running_analysis.md      # Step-by-step execution
-│   │   └── interpreting_results.md  # Understanding outputs
-│   │
-│   ├── api_reference/               # Code documentation
-│   │   └── (Auto-generated from docstrings)
-│   │
-│   └── data_protocol/               # ⚠️ CRITICAL: Data security
-│       ├── data_handling_protocol.md # How to handle NISR data
-│       ├── output_disclosure_rules.md # What can be shared
-│       └── audit_logging_requirements.md
-│
-├── tests/                           # Unit and integration tests
-│   ├── test_data_processing.py      # Tests on synthetic data
-│   ├── test_models.py               # Model validation tests
-│   └── test_integration.py          # End-to-end workflow tests
-│
-├── environment/                     # Development setup
-│   ├── environment.yml              # Conda environment
-│   ├── requirements.txt             # pip requirements
-│   └── Dockerfile                   # Containerization
-│
-└── deployment/                      # Production deployment
-    ├── nisr_server_setup/           # NISR server configuration
-    ├── scheduled_jobs/              # Cron jobs for updates
-    └── monitoring/                  # Performance monitoring
+# Repository Structure Overview
+Path	Type	Description	Security Level
+🔒 SECURE_ZONE	Directory	NISR Internal Only (Not in repository)	🔴 Confidential
+/nisr_server/dhs_data/	Data	Actual DHS .DTA files	🔴 Confidential
+├── RWKR81FL.DTA	File	Children's Recode (stunting data)	🔴 Confidential
+├── RWIR81FL.DTA	File	Individual Recode	🔴 Confidential
+└── RWHR81FL.DTA	File	Household Recode	🔴 Confidential
+/nisr_server/census_data/	Data	Rwanda Census 2012	🔴 Confidential
+└── PHC5_2012/	Directory	Census with coordinates	🔴 Confidential
+/nisr_server/results/	Output	Final outputs for internal use	🔴 Confidential
+code/	Directory	✅ PUBLIC: All code (no sensitive data)	🟢 Public
+1_data_processing/	Module	Data preparation modules	🟢 Public
+├── dhs_processor.py	Script	Loads & processes DHS data	🟢 Public
+│ └── process_dhs_children_stunting()	Function	Reads DHS .DTA files, calculates HAZ scores	🟢 Public
+├── census_harmonizer.py	Script	Harmonizes DHS-Census variables	🟢 Public
+│ └── harmonize_datasets()	Function	Matches sector IDs, creates common variables	🟢 Public
+├── elevation_extractor.py	Script	Geographic elevation processing	🟢 Public
+│ └── extract_elevation_data()	Function	Extracts elevation from coordinates	🟢 Public
+└── sector_aggregator.py	Script	Creates analysis datasets	🟢 Public
+└── create_sector_level_analysis()	Function	Aggregates to sector-level, adds covariates	🟢 Public
+2_sae_models/	Module	Statistical modeling	🟢 Public
+├── sae_fay_herriot.py	Script	Fay-Herriot SAE implementation	🟢 Public
+│ └── fit_fay_herriot_model()	Function	Area-level SAE with elevation covariate	🟢 Public
+├── model_validation.py	Script	Cross-validation & diagnostics	🟢 Public
+│ └── cross_validate_sae()	Function	Leave-one-out CV, RMSE/bias metrics	🟢 Public
+└── uncertainty_estimation.py	Script	Error propagation	🟢 Public
+3_visualization/	Module	Mapping and charts	🟢 Public
+├── sector_maps.py	Script	Spatial visualization	🟢 Public
+│ └── create_stunting_elevation_map()	Function	Choropleth maps with stunting/elevation	🟢 Public
+├── results_dashboard.py	Script	Interactive dashboard	🟢 Public
+│ └── launch_dashboard()	Function	Streamlit app for exploring results	🟢 Public
+└── report_generator.py	Script	Automated reporting	🟢 Public
+4_utilities/	Module	Helper functions	🟢 Public
+├── config_manager.py	Script	Manages paths and parameters	🟢 Public
+├── data_validation.py	Script	Quality checks	🟢 Public
+└── logging_setup.py	Script	Audit logging	🟢 Public
+run_pipeline.py	Script	⭐ MAIN EXECUTION SCRIPT	🟢 Public
+config/	Directory	Configuration files	🟡 Restricted
+├── paths.json	Config	File path definitions (JSON)	🟡 Restricted
+├── model_parameters.yaml	Config	SAE model settings (YAML)	🟢 Public
+└── variables_mapping.csv	Config	DHS-Census variable matching	🟡 Restricted
+data/	Directory	✅ PUBLIC: Synthetic/test data only	🟢 Public
+synthetic/	Data	Simulated data for development	🟢 Public
+├── sample_dhs_children.csv	File	Fake child records	🟢 Public
+├── sample_sector_data.csv	File	Fake sector aggregates	🟢 Public
+└── README_SYNTHETIC.md	Doc	Clearly marks as fake data	🟢 Public
+external/	Data	Publicly available data	🟢 Public
+├── rwanda_admin_boundaries/	Data	Shapefiles from GADM	🟢 Public
+├── srtm_elevation/	Data	Public elevation tiles	🟢 Public
+└── metadata/	Doc	Public data documentation	🟢 Public
+processed/	Data	Will contain processed outputs	🟡 Restricted
+outputs/	Directory	Generated results	🟡 Restricted
+models/	Output	Saved model objects	🟡 Restricted
+predictions/	Output	Sector-level estimates	🟡 Restricted
+Format	Schema	sector_id, stunting_rate, se, lower_ci, upper_ci	🟡 Restricted
+reports/	Output	Analysis reports	🟡 Restricted
+├── technical_report.pdf	Report	Full methodology	🟡 Restricted
+├── policy_brief.pdf	Report	Non-technical summary	🟢 Public
+└── validation_results/	Output	Cross-validation outputs	🟡 Restricted
+visualizations/	Output	Maps and charts	🟢 Public
+├── maps/	Output	Interactive HTML maps	🟢 Public
+├── charts/	Output	.png charts for reports	🟢 Public
+└── dashboard/	Output	Dashboard assets	🟢 Public
+docs/	Directory	Documentation	🟢 Public
+methodology/	Docs	Technical documentation	🟢 Public
+├── sae_methodology.md	Doc	SAE theory & implementation	🟢 Public
+├── data_harmonization.md	Doc	DHS-Census matching	🟢 Public
+└── elevation_processing.md	Doc	GIS methods	🟢 Public
+user_guides/	Docs	How-to guides	🟢 Public
+├── setup_guide.md	Doc	Environment setup	🟢 Public
+├── running_analysis.md	Doc	Step-by-step execution	🟢 Public
+└── interpreting_results.md	Doc	Understanding outputs	🟢 Public
+api_reference/	Docs	Code documentation	🟢 Public
+Auto-generated	Docs	From docstrings	🟢 Public
+data_protocol/	Docs	⚠️ CRITICAL: Data security	🟢 Public
+├── data_handling_protocol.md	Protocol	How to handle NISR data	🟢 Public
+├── output_disclosure_rules.md	Protocol	What can be shared	🟢 Public
+└── audit_logging_requirements.md	Protocol	Logging requirements	🟢 Public
+tests/	Directory	Unit and integration tests	🟢 Public
+├── test_data_processing.py	Tests	Tests on synthetic data	🟢 Public
+├── test_models.py	Tests	Model validation tests	🟢 Public
+└── test_integration.py	Tests	End-to-end workflow tests	🟢 Public
+environment/	Directory	Development setup	🟢 Public
+├── environment.yml	Config	Conda environment	🟢 Public
+├── requirements.txt	Config	pip requirements	🟢 Public
+└── Dockerfile	Config	Containerization	🟢 Public
+deployment/	Directory	Production deployment	🟡 Restricted
+├── nisr_server_setup/	Config	NISR server configuration	🔴 Confidential
+├── scheduled_jobs/	Scripts	Cron jobs for updates	🟡 Restricted
+└── monitoring/	Config	Performance monitoring	🟡 Restricted
+ Security Level Legend
+•	Confidential: NISR internal only, never shared
+•	Restricted: Internal use, limited sharing after review
+•	Public: Can be shared in repository
+
 
 # KEY COMPONENTS LOCATION
 ## 1. Main Pipeline Script
